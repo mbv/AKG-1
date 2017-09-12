@@ -76,12 +76,37 @@
           circleY = event.clientY;
           bigN = 0;
 
-          intersection(point(200,200), point(300, 200), {
+          draw();
+          var ctx = canvas.getContext('2d');
+          ctx.fillStyle = 'rgba(200, 0, 0, 1)';
+          intersection(point(200, 200), point(300, 200), {
             x: circleX,
             y: circleY,
-            radius: 100,
-          })
-          draw();
+            radius: 100
+          }).forEach(function (p) {
+            ctx.fillRect(p.x - 5, p.y - 5, 10, 10);
+          });
+          intersection(point(300, 200), point(300, 300), {
+            x: circleX,
+            y: circleY,
+            radius: 100
+          }).forEach(function (p) {
+            ctx.fillRect(p.x - 5, p.y - 5, 10, 10);
+          });
+          intersection(point(300, 300), point(200, 300), {
+            x: circleX,
+            y: circleY,
+            radius: 100
+          }).forEach(function (p) {
+            ctx.fillRect(p.x - 5, p.y - 5, 10, 10);
+          });
+          intersection(point(200, 300), point(200, 200), {
+            x: circleX,
+            y: circleY,
+            radius: 100
+          }).forEach(function (p) {
+            ctx.fillRect(p.x - 5, p.y - 5, 10, 10);
+          });
         }
       });
 
@@ -152,6 +177,10 @@
     return point(p.x - d.x, p.y - d.y)
   }
 
+  function pointBetweenPoints(p, p1, p2) {
+    return (p.x <= Math.max(p1.x, p2.x)) && (p.x >= Math.min(p1.x, p2.x)) &&
+      (p.y <= Math.max(p1.y, p2.y)) && (p.y >= Math.min(p1.y, p2.y));
+  }
 
   function intersection(p1, p2, circle) {
     var dX = circle.x;
@@ -159,43 +188,53 @@
     //console.log(circle);
     //console.log(p1);
     //console.log(p2);
-    p1 = movePoint(p1, circle)
-    p2 = movePoint(p2, circle)
+    var dP1 = movePoint(p1, circle)
+    var dP2 = movePoint(p2, circle)
 
-    var a = p2.y - p1.y;
-    var b = p2.x - p1.x;
-    var c = p1.x * p2.y - p2.x * p1.y;
+    var a = dP2.y - dP1.y;
+    var b = dP2.x - dP1.x;
+    var c = dP1.x * dP2.y - dP2.x * dP1.y;
     var r = circle.radius;
     var EPS = 0.0001;
 
-    var x0 = -a*c/(a*a+b*b),  y0 = -b*c/(a*a+b*b);
-    if (c*c > r*r*(a*a+b*b)+EPS) {
+    var x0 = -a * c / (a * a + b * b), y0 = -b * c / (a * a + b * b);
+    var result = [];
+    if (c * c > r * r * (a * a + b * b) + EPS) {
       console.log("none")
-      return [];
     }
-      //puts ("no points");
-    else if (Math.abs (c*c - r*r*(a*a+b*b)) < EPS) {
-      return [point(dX + x0, dY + y0)];
-      //console.log("One")
-      //console.log(point(dX + x0, dY + y0))
+    //puts ("no points");
+    else if (Math.abs(c * c - r * r * (a * a + b * b)) < EPS) {
+      var p = point(dX + x0, dY + y0);
+      if (pointBetweenPoints(p, p1, p2)) {
+        result.push(p);
+      }
+      console.log("One")
+      console.log(point(dX + x0, dY + y0))
       //puts ("1 point");
       //cout << x0 << ' ' << y0 << '\n';
     }
     else {
-      var d = r*r - c*c/(a*a+b*b);
-      var mult = Math.sqrt (d / (a*a+b*b));
+      var d = r * r - c * c / (a * a + b * b);
+      var mult = Math.sqrt(d / (a * a + b * b));
 
-      var pA = point(dX + x0 + b * mult, dY + y0 - a * mult);
-      var pB = point(dX + x0 - b * mult, dY + y0 + a * mult);
-      return [pA, pB];
+      var pA = point(dX - x0 + b * mult, dY + y0 - a * mult);
+      var pB = point(dX - x0 - b * mult, dY + y0 + a * mult);
+      if (pointBetweenPoints(pA, p1, p2)) {
+        result.push(pA);
+      }
+      if (pointBetweenPoints(pB, p1, p2)) {
+        result.push(pB);
+      }
 
-      //console.log("Two")
-      //console.log(pA)
-      //console.log(pB)
+      console.log("Two")
+      console.log(pA)
+      console.log(pB)
 
       //puts ("2 points");
       //cout << ax << ' ' << ay << '\n' << bx << ' ' << by << '\n';
     }
+
+    return result;
 
   }
 </script>

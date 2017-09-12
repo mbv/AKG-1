@@ -12,231 +12,323 @@
 <body onload="init();">
 <canvas id="canvas"></canvas>
 <script type="application/javascript">
-  function draw() {
-    var width = window.innerWidth ||
-      document.documentElement.clientWidth ||
-      document.body.clientWidth;
 
-    var height = window.innerHeight ||
-      document.documentElement.clientHeight ||
-      document.body.clientHeight;
-    canvas.width = width;
-    canvas.height = height;
-    if (canvas.getContext) {
-      var ctx = canvas.getContext('2d');
+    var circle = {
+        x: 500,
+        y: 500,
+        radius: 100
+    };
 
-      var square = {
-        width: Math.round(height / 1.2),
-        height: Math.round(height / 1.2)
-      };
-      var startDrawPoint = point(200, 200)
+    var rectangle = {
+        x: 50,
+        y: 50,
+        width: 100,
+        height: 200,
+        getPoints: function () {
+            return [
+                point(this.x, this.y),
+                point(this.x + this.width, this.y),
+                point(this.x + this.width, this.y + this.height),
+                point(this.x, this.y + this.height)
+            ]
+        }
+    };
 
-
-      drawPoints(ctx, startDrawPoint, rectangle, 'rgba(0, 0, 200, 1)');
-
-      circle(ctx, circleX, circleY, 100);
-    }
-  }
-
-  var circleX = 500;
-  var circleY = 500;
-
-  var rectangle;
-
-  var startMoving = false;
-  var canvas = document.getElementById('canvas');
-
-  function init() {
-    rectangle = {
-      data: [
-        point(0, 0),
-        point(100, 0),
-        point(100, 100),
-        point(0, 100)
-      ],
-      getLength: function () {
-        return this.data.length;
-      },
-      getPoint: function (i) {
-        return this.data[i % this.data.length]
-      }
+    var spectatorWindow = {
+        getPoints: function () {
+            return this.points
+        },
+        points: [
+            point(100, 100),
+            point(600, 100),
+            point(600, 600),
+            point(100, 600)
+        ]
     };
 
 
-    draw();
+    function draw() {
+        var width = window.innerWidth ||
+            document.documentElement.clientWidth ||
+            document.body.clientWidth;
 
-    if (canvas.addEventListener) {
+        var height = window.innerHeight ||
+            document.documentElement.clientHeight ||
+            document.body.clientHeight;
+        canvas.width = width;
+        canvas.height = height;
+        if (canvas.getContext) {
+            var ctx = canvas.getContext('2d');
 
-      canvas.addEventListener("click", function (event) {
-        startMoving = !startMoving;
-      });
-      canvas.addEventListener("mousemove", function (event) {
-        if (startMoving) {
-          circleX = event.clientX;
-          circleY = event.clientY;
-          bigN = 0;
+            drawCircle(ctx, circle, 'rgba(0, 200, 200, 1)');
+            drawPoints(ctx, rectangle, 'rgba(0, 0, 200, 1)', false);
+            drawPoints(ctx, spectatorWindow, 'rgba(200, 0, 200, 1)', true);
 
-          draw();
-          var ctx = canvas.getContext('2d');
-          ctx.fillStyle = 'rgba(200, 0, 0, 1)';
-          intersection(point(200, 200), point(300, 200), {
-            x: circleX,
-            y: circleY,
-            radius: 100
-          }).forEach(function (p) {
-            ctx.fillRect(p.x - 5, p.y - 5, 10, 10);
-          });
-          intersection(point(300, 200), point(300, 300), {
-            x: circleX,
-            y: circleY,
-            radius: 100
-          }).forEach(function (p) {
-            ctx.fillRect(p.x - 5, p.y - 5, 10, 10);
-          });
-          intersection(point(300, 300), point(200, 300), {
-            x: circleX,
-            y: circleY,
-            radius: 100
-          }).forEach(function (p) {
-            ctx.fillRect(p.x - 5, p.y - 5, 10, 10);
-          });
-          intersection(point(200, 300), point(200, 200), {
-            x: circleX,
-            y: circleY,
-            radius: 100
-          }).forEach(function (p) {
-            ctx.fillRect(p.x - 5, p.y - 5, 10, 10);
-          });
+
         }
-      });
-
-    }
-  }
-
-  function drawPoints(ctx, startDrawPoint, points, color) {
-    for (var i = 0; i < points.getLength(); i++) {
-      line(ctx, startDrawPoint, points.getPoint(i), points.getPoint(i + 1), color)
-    }
-  }
-
-  function point(x, y) {
-    return {
-      x: x,
-      y: y
-    }
-  }
-
-  function line(ctx, startDrawPoint, p1, p2, color) {
-    ctx.strokeStyle = color;
-    ctx.beginPath();
-    ctx.moveTo(startDrawPoint.x + p1.x, startDrawPoint.y + p1.y);
-    ctx.lineTo(startDrawPoint.x + p2.x, startDrawPoint.y + p2.y);
-    ctx.closePath();
-    ctx.stroke();
-  }
-
-  var bigN = 0;
-
-  function plot_circle(ctx, x, y, x_center, y_center, force_draw = false) {
-    if ((bigN % 10 < 5) && !force_draw) {
-      return
-    }
-    putpixel(ctx, x_center + x, y_center + y);
-    putpixel(ctx, x_center + x, y_center - y);
-    putpixel(ctx, x_center - x, y_center + y);
-    putpixel(ctx, x_center - x, y_center - y);
-  }
-
-  function circle(ctx, x_center, y_center, radius, color) {
-    ctx.fillStyle = color;
-    var x = 0;
-    var y = radius;
-    var delta = 3 - 2 * radius;
-    while (x < y) {
-      plot_circle(ctx, x, y, x_center, y_center);
-      plot_circle(ctx, y, x, x_center, y_center);
-      bigN++;
-      if (delta < 0)
-        delta += 4 * x + 6;
-      else {
-        delta += 4 * (x - y) + 10;
-        y--;
-      }
-      x++;
     }
 
-    if (x === y) plot_circle(ctx, x, y, x_center, y_center, true);
-  }
+    var startMoving = false;
+    var figure = 0;
+    var dPoint = point(0,0);
+    var canvas = document.getElementById('canvas');
+
+    function init() {
 
 
-  function putpixel(ctx, x, y) {
-    ctx.fillRect(x, y, 1, 1);
-  }
+        draw();
 
-  function movePoint(p, d) {
-    return point(p.x - d.x, p.y - d.y)
-  }
+        if (canvas.addEventListener) {
 
-  function pointBetweenPoints(p, p1, p2) {
-    return (p.x <= Math.max(p1.x, p2.x)) && (p.x >= Math.min(p1.x, p2.x)) &&
-      (p.y <= Math.max(p1.y, p2.y)) && (p.y >= Math.min(p1.y, p2.y));
-  }
+            canvas.addEventListener("click", function (event) {
+                if (!startMoving) {
+                    var p = point(event.clientX, event.clientY);
+                    if (pointInCircle(p, circle)) {
+                        figure = "circle";
+                        startMoving = true;
+                        dPoint = point(circle.x - event.clientX, circle.y - event.clientY)
+                    } else if (pointIsInPoly(p, rectangle.getPoints())) {
+                        figure = "rectangle";
+                        startMoving = true;
+                        dPoint = point(rectangle.x - event.clientX, rectangle.y - event.clientY)
+                    }
+                } else {
+                    startMoving = !startMoving;
+                }
 
-  function intersection(p1, p2, circle) {
-    var dX = circle.x;
-    var dY = circle.y;
-    //console.log(circle);
-    //console.log(p1);
-    //console.log(p2);
-    var dP1 = movePoint(p1, circle)
-    var dP2 = movePoint(p2, circle)
+            });
+            canvas.addEventListener("mousemove", function (event) {
+                if (startMoving) {
+                    if (figure === "circle") {
+                        circle.x = event.clientX + dPoint.x;
+                        circle.y = event.clientY + dPoint.y;
+                    } else if (figure === "rectangle") {
+                        rectangle.x = event.clientX + dPoint.x;
+                        rectangle.y = event.clientY + dPoint.y;
+                    }
+                    bigN = 0;
+                    bigNForLine = 0;
 
-    var a = dP2.y - dP1.y;
-    var b = dP2.x - dP1.x;
-    var c = dP1.x * dP2.y - dP2.x * dP1.y;
-    var r = circle.radius;
-    var EPS = 0.0001;
+                    draw();
+                }
+            });
 
-    var x0 = -a * c / (a * a + b * b), y0 = -b * c / (a * a + b * b);
-    var result = [];
-    if (c * c > r * r * (a * a + b * b) + EPS) {
-      console.log("none")
-    }
-    //puts ("no points");
-    else if (Math.abs(c * c - r * r * (a * a + b * b)) < EPS) {
-      var p = point(dX + x0, dY + y0);
-      if (pointBetweenPoints(p, p1, p2)) {
-        result.push(p);
-      }
-      console.log("One")
-      console.log(point(dX + x0, dY + y0))
-      //puts ("1 point");
-      //cout << x0 << ' ' << y0 << '\n';
-    }
-    else {
-      var d = r * r - c * c / (a * a + b * b);
-      var mult = Math.sqrt(d / (a * a + b * b));
-
-      var pA = point(dX - x0 + b * mult, dY + y0 - a * mult);
-      var pB = point(dX - x0 - b * mult, dY + y0 + a * mult);
-      if (pointBetweenPoints(pA, p1, p2)) {
-        result.push(pA);
-      }
-      if (pointBetweenPoints(pB, p1, p2)) {
-        result.push(pB);
-      }
-
-      console.log("Two")
-      console.log(pA)
-      console.log(pB)
-
-      //puts ("2 points");
-      //cout << ax << ' ' << ay << '\n' << bx << ' ' << by << '\n';
+        }
     }
 
-    return result;
+    function drawPoints(ctx, shape, color, solidLine) {
+        var len = shape.getPoints().length;
+        for (var i = 0; i < len; i++) {
+            line(ctx, shape.getPoints()[i % len], shape.getPoints()[(i + 1) % len], color, solidLine)
+        }
+    }
 
-  }
+    function point(x, y) {
+        return {
+            x: x,
+            y: y
+        }
+    }
+
+    /*    function line(ctx, p1, p2, color) {
+            ctx.strokeStyle = color;
+            ctx.beginPath();
+            ctx.moveTo(p1.x, p1.y);
+            ctx.lineTo(p2.x, p2.y);
+            ctx.closePath();
+            ctx.stroke();
+        }*/
+
+    function line(ctx, p1, p2, color, solidLine) {
+        ctx.fillStyle = color;
+
+        var x1 = p1.x;
+        var x2 = p2.x;
+        var y1 = p1.y;
+        var y2 = p2.y;
+
+        var deltaX = Math.abs(x2 - x1);
+        var deltaY = Math.abs(y2 - y1);
+        var signX = x1 < x2 ? 1 : -1;
+        var signY = y1 < y2 ? 1 : -1;
+
+        var error = deltaX - deltaY;
+
+        putLinePixel(ctx, x2, y2, solidLine);
+        while (x1 !== x2 || y1 !== y2) {
+            putLinePixel(ctx, x1, y1, solidLine);
+            var error2 = error * 2;
+            //
+            if (error2 > -deltaY) {
+                error -= deltaY;
+                x1 += signX;
+            }
+            if (error2 < deltaX) {
+                error += deltaX;
+                y1 += signY;
+            }
+        }
+
+    }
+
+    var bigNForLine = 0;
+
+    function putLinePixel(ctx, x, y, solidLine) {
+        var doDraw = true;
+        if ((bigNForLine % 10 < 5) && !solidLine) {
+            doDraw = false;
+        }
+
+        var per = !pointIsInPoly(point(x, y), spectatorWindow.getPoints());
+
+
+        if (!per || (per && doDraw)) {
+            ctx.fillRect(x, y, 1, 1);
+        }
+        bigNForLine++;
+    }
+
+
+    function pointIsInPoly(p, polygon) {
+        var isInside = false;
+        var minX = polygon[0].x, maxX = polygon[0].x;
+        var minY = polygon[0].y, maxY = polygon[0].y;
+        for (var n = 1; n < polygon.length; n++) {
+            var q = polygon[n];
+            minX = Math.min(q.x, minX);
+            maxX = Math.max(q.x, maxX);
+            minY = Math.min(q.y, minY);
+            maxY = Math.max(q.y, maxY);
+        }
+
+        if (p.x < minX || p.x > maxX || p.y < minY || p.y > maxY) {
+            return false;
+        }
+
+        var i = 0, j = polygon.length - 1;
+        for (i, j; i < polygon.length; j = i++) {
+            if ((polygon[i].y > p.y) !== (polygon[j].y > p.y) &&
+                p.x < (polygon[j].x - polygon[i].x) * (p.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x) {
+                isInside = !isInside;
+            }
+        }
+
+        return isInside;
+    }
+
+    function pointInCircle(p, c) {
+        return (Math.pow(p.x - c.x, 2) + Math.pow(p.y - c.y, 2)) <= Math.pow(c.radius, 2);
+    }
+
+    function drawCircle(ctx, circle, color) {
+        ctx.fillStyle = color;
+        var x = 0;
+        var y = circle.radius;
+        var delta = 3 - 2 * circle.radius;
+        while (x < y) {
+            plotCircle(ctx, x, y, circle.x, circle.y);
+            plotCircle(ctx, y, x, circle.x, circle.y);
+            bigN++;
+            if (delta < 0)
+                delta += 4 * x + 6;
+            else {
+                delta += 4 * (x - y) + 10;
+                y--;
+            }
+            x++;
+        }
+
+        if (x === y) plotCircle(ctx, x, y, circle.x, circle.y, true);
+    }
+
+
+    var bigN = 0;
+
+    function plotCircle(ctx, x, y, x_center, y_center, force_draw = false) {
+        var no_draw_for_invisble = false;
+        if ((bigN % 10 < 5) && !force_draw) {
+            no_draw_for_invisble = true;
+        }
+        putCirclePixel(ctx, x_center + x, y_center + y, no_draw_for_invisble);
+        putCirclePixel(ctx, x_center + x, y_center - y, no_draw_for_invisble);
+        putCirclePixel(ctx, x_center - x, y_center + y, no_draw_for_invisble);
+        putCirclePixel(ctx, x_center - x, y_center - y, no_draw_for_invisble);
+    }
+
+
+    function putCirclePixel(ctx, x, y, no_draw) {
+        var per = pointIsInPoly(point(x, y), rectangle.getPoints());
+        per = per || !pointIsInPoly(point(x, y), spectatorWindow.getPoints());
+        if (!per || (per && !no_draw)) {
+            ctx.fillRect(x, y, 1, 1);
+        }
+    }
+
+
+    function movePoint(p, d) {
+        return point(p.x - d.x, p.y - d.y)
+    }
+
+    function pointBetweenPoints(p, p1, p2) {
+        return (p.x <= Math.max(p1.x, p2.x)) && (p.x >= Math.min(p1.x, p2.x)) &&
+            (p.y <= Math.max(p1.y, p2.y)) && (p.y >= Math.min(p1.y, p2.y));
+    }
+
+    function intersection(p1, p2, circle) {
+        var dX = circle.x;
+        var dY = circle.y;
+        //console.log(circle);
+        //console.log(p1);
+        //console.log(p2);
+        var dP1 = movePoint(p1, circle)
+        var dP2 = movePoint(p2, circle)
+
+        var a = dP2.y - dP1.y;
+        var b = dP2.x - dP1.x;
+        var c = dP1.x * dP2.y - dP2.x * dP1.y;
+        var r = circle.radius;
+        var EPS = 0.0001;
+
+        var x0 = -a * c / (a * a + b * b), y0 = -b * c / (a * a + b * b);
+        var result = [];
+        if (c * c > r * r * (a * a + b * b) + EPS) {
+            console.log("none")
+        }
+        //puts ("no points");
+        else if (Math.abs(c * c - r * r * (a * a + b * b)) < EPS) {
+            var p = point(dX + x0, dY + y0);
+            if (pointBetweenPoints(p, p1, p2)) {
+                result.push(p);
+            }
+            console.log("One")
+            console.log(point(dX + x0, dY + y0))
+            //puts ("1 point");
+            //cout << x0 << ' ' << y0 << '\n';
+        }
+        else {
+            var d = r * r - c * c / (a * a + b * b);
+            var mult = Math.sqrt(d / (a * a + b * b));
+
+            var pA = point(dX - x0 + b * mult, dY + y0 - a * mult);
+            var pB = point(dX - x0 - b * mult, dY + y0 + a * mult);
+            if (pointBetweenPoints(pA, p1, p2)) {
+                result.push(pA);
+            }
+            if (pointBetweenPoints(pB, p1, p2)) {
+                result.push(pB);
+            }
+
+            console.log("Two")
+            console.log(pA)
+            console.log(pB)
+
+            //puts ("2 points");
+            //cout << ax << ' ' << ay << '\n' << bx << ' ' << by << '\n';
+        }
+
+        return result;
+
+    }
 </script>
 </body>
 </html>

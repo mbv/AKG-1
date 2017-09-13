@@ -12,323 +12,494 @@
 <body onload="init();">
 <canvas id="canvas"></canvas>
 <script type="application/javascript">
+  const CIRCLE_TYPE = "circle";
+  const RECTANGLE_TYPE = "rectangle";
 
-    var circle = {
-        x: 500,
-        y: 500,
-        radius: 100
-    };
-
-    var rectangle = {
-        x: 50,
-        y: 50,
-        width: 100,
-        height: 200,
-        getPoints: function () {
-            return [
-                point(this.x, this.y),
-                point(this.x + this.width, this.y),
-                point(this.x + this.width, this.y + this.height),
-                point(this.x, this.y + this.height)
-            ]
-        }
-    };
-
-    var spectatorWindow = {
-        getPoints: function () {
-            return this.points
-        },
-        points: [
-            point(100, 100),
-            point(600, 100),
-            point(600, 600),
-            point(100, 600)
-        ]
-    };
-
-
-    function draw() {
-        var width = window.innerWidth ||
-            document.documentElement.clientWidth ||
-            document.body.clientWidth;
-
-        var height = window.innerHeight ||
-            document.documentElement.clientHeight ||
-            document.body.clientHeight;
-        canvas.width = width;
-        canvas.height = height;
-        if (canvas.getContext) {
-            var ctx = canvas.getContext('2d');
-
-            drawCircle(ctx, circle, 'rgba(0, 200, 200, 1)');
-            drawPoints(ctx, rectangle, 'rgba(0, 0, 200, 1)', false);
-            drawPoints(ctx, spectatorWindow, 'rgba(200, 0, 200, 1)', true);
-
-
-        }
-    }
-
-    var startMoving = false;
-    var figure = 0;
-    var dPoint = point(0,0);
-    var canvas = document.getElementById('canvas');
-
-    function init() {
-
-
-        draw();
-
-        if (canvas.addEventListener) {
-
-            canvas.addEventListener("click", function (event) {
-                if (!startMoving) {
-                    var p = point(event.clientX, event.clientY);
-                    if (pointInCircle(p, circle)) {
-                        figure = "circle";
-                        startMoving = true;
-                        dPoint = point(circle.x - event.clientX, circle.y - event.clientY)
-                    } else if (pointIsInPoly(p, rectangle.getPoints())) {
-                        figure = "rectangle";
-                        startMoving = true;
-                        dPoint = point(rectangle.x - event.clientX, rectangle.y - event.clientY)
-                    }
-                } else {
-                    startMoving = !startMoving;
-                }
-
-            });
-            canvas.addEventListener("mousemove", function (event) {
-                if (startMoving) {
-                    if (figure === "circle") {
-                        circle.x = event.clientX + dPoint.x;
-                        circle.y = event.clientY + dPoint.y;
-                    } else if (figure === "rectangle") {
-                        rectangle.x = event.clientX + dPoint.x;
-                        rectangle.y = event.clientY + dPoint.y;
-                    }
-                    bigN = 0;
-                    bigNForLine = 0;
-
-                    draw();
-                }
-            });
-
-        }
-    }
-
-    function drawPoints(ctx, shape, color, solidLine) {
-        var len = shape.getPoints().length;
-        for (var i = 0; i < len; i++) {
-            line(ctx, shape.getPoints()[i % len], shape.getPoints()[(i + 1) % len], color, solidLine)
-        }
-    }
-
-    function point(x, y) {
+  window.scope = {
+    shape: {
+      createCircle: function (x, y, r, number) {
         return {
-            x: x,
-            y: y
+          x: x,
+          y: y,
+          radius: r,
+          number: number
         }
+      },
+      createRectangle: function (x, y, width, height, angle) {
+        return {
+          x: x,
+          y: y,
+          width: width,
+          height: height,
+          angle: angle,
+          getCenter: function () {
+            let points = this.getRawPoints();
+            return centerTwoPoints(centerTwoPoints(points[0], points[2]), centerTwoPoints(points[1], points[3]))
+          },
+          getPoints: function () {
+            let center = this.getCenter();
+            return [
+              rotatePoint(point(this.x, this.y), center, this.angle),
+              rotatePoint(point(this.x + this.width, this.y), center, this.angle),
+              rotatePoint(point(this.x + this.width, this.y + this.height), center, this.angle),
+              rotatePoint(point(this.x, this.y + this.height), center, this.angle)
+            ]
+          },
+          getRawPoints: function () {
+            return [
+              point(this.x, this.y),
+              point(this.x + this.width, this.y),
+              point(this.x + this.width, this.y + this.height),
+              point(this.x, this.y + this.height)
+            ]
+          },
+          getChangeCircles: function () {
+            let points = this.getPoints();
+            return [
+              scope.shape.createCircle(points[0].x, points[0].y, 5),
+              scope.shape.createCircle(points[2].x, points[2].y, 5)
+            ];
+          },
+          getType: function () {
+            return RECTANGLE_TYPE;
+          },
+          getRotateCircle: function () {
+            let center = this.getCenter();
+            return scope.shape.createCircle(center.x, center.y, 5);
+          }
+        };
+      }
     }
 
-    /*    function line(ctx, p1, p2, color) {
-            ctx.strokeStyle = color;
-            ctx.beginPath();
-            ctx.moveTo(p1.x, p1.y);
-            ctx.lineTo(p2.x, p2.y);
-            ctx.closePath();
-            ctx.stroke();
-        }*/
+  };
+  let circle = {
+      x: 500,
+      y: 500,
+      radius: 100,
+      getChangeCircles: function () {
+        return [
+          scope.shape.createCircle(this.x, this.y + this.radius, 5)
+        ];
+      },
+      getType: function () {
+        return CIRCLE_TYPE;
+      }
+    },
+    rectangle = scope.shape.createRectangle(50, 50, 100, 200, Math.PI / 180 * 15);
 
-    function line(ctx, p1, p2, color, solidLine) {
-        ctx.fillStyle = color;
+  let spectatorWindow = scope.shape.createRectangle(100, 100, 500, 500, -Math.PI / 180 * 17);
 
-        var x1 = p1.x;
-        var x2 = p2.x;
-        var y1 = p1.y;
-        var y2 = p2.y;
+  function centerTwoPoints(p1, p2) {
+    return point(Math.round((p1.x + p2.x) / 2), Math.round((p1.y + p2.y) / 2))
+  }
 
-        var deltaX = Math.abs(x2 - x1);
-        var deltaY = Math.abs(y2 - y1);
-        var signX = x1 < x2 ? 1 : -1;
-        var signY = y1 < y2 ? 1 : -1;
+  function rotatePoint(p, c, angle) {
+    let result = point(0, 0);
+    result.x = Math.round(Math.cos(angle) * (p.x - c.x) + Math.sin(angle) * (p.y - c.y)) + c.x;
+    result.y = Math.round(Math.cos(angle) * (p.y - c.y) - Math.sin(angle) * (p.x - c.x)) + c.y;
+    return result;
+  }
 
-        var error = deltaX - deltaY;
 
-        putLinePixel(ctx, x2, y2, solidLine);
-        while (x1 !== x2 || y1 !== y2) {
-            putLinePixel(ctx, x1, y1, solidLine);
-            var error2 = error * 2;
-            //
-            if (error2 > -deltaY) {
-                error -= deltaY;
-                x1 += signX;
+  function draw() {
+    let width = window.innerWidth ||
+      document.documentElement.clientWidth ||
+      document.body.clientWidth;
+
+    let height = window.innerHeight ||
+      document.documentElement.clientHeight ||
+      document.body.clientHeight;
+    canvas.width = width;
+    canvas.height = height;
+    if (canvas.getContext) {
+      let ctx = canvas.getContext('2d');
+
+      drawCircle(ctx, circle, 'rgba(0, 200, 200, 1)');
+      drawPoints(ctx, rectangle, 'rgba(0, 0, 200, 1)', false);
+      drawPoints(ctx, spectatorWindow, 'rgba(200, 0, 200, 1)', true);
+
+      if (showChangeElements) {
+        for (let c of circle.getChangeCircles()) {
+          drawChangeCirlce(ctx, c, 'red', '#330000')
+        }
+
+        for (let c of rectangle.getChangeCircles()) {
+          drawChangeCirlce(ctx, c, 'red', '#330000')
+        }
+        drawChangeCirlce(ctx, rectangle.getRotateCircle(), 'green', '#003300');
+
+        for (let c of spectatorWindow.getChangeCircles()) {
+          drawChangeCirlce(ctx, c, 'red', '#330000')
+        }
+        drawChangeCirlce(ctx, spectatorWindow.getRotateCircle(), 'green', '#003300');
+      }
+    }
+  }
+
+  let startMoving = false;
+  let figure = 0;
+  let dPoint = point(0, 0);
+  let canvas = document.getElementById('canvas');
+  let showChangeElements = false;
+
+  let startChanging = false;
+  let startRotating = false;
+  let changingPointNumber = 0;
+  let figureObject = null;
+
+  function init() {
+
+
+    draw();
+
+    if (canvas.addEventListener) {
+
+      canvas.addEventListener("click", function (event) {
+        if (!startMoving && !startChanging && !startRotating) {
+          let p = point(event.clientX, event.clientY);
+
+          let used = false;
+
+          if (showChangeElements) {
+            let primitives = [circle, rectangle, spectatorWindow];
+            for (let primitive of primitives) {
+              for (let [i, c] of primitive.getChangeCircles().entries()) {
+                if (pointInCircle(p, c)) {
+                  figure = primitive.getType();
+                  startChanging = true;
+                  dPoint = point(c.x - event.clientX, c.y - event.clientY);
+                  changingPointNumber = i;
+                  figureObject = primitive;
+
+                  used = true;
+                  break;
+                }
+              }
             }
-            if (error2 < deltaX) {
-                error += deltaX;
-                y1 += signY;
-            }
-        }
+            let rotatePrimitives = [rectangle, spectatorWindow];
+            for (let primitive of rotatePrimitives) {
+              let c = primitive.getRotateCircle();
+              if (pointInCircle(p, c)) {
+                figure = primitive.getType();
+                startRotating = true;
+                dPoint = point(c.x - event.clientX, c.y - event.clientY);
+                figureObject = primitive;
 
-    }
+                used = true;
+                break;
+              }
 
-    var bigNForLine = 0;
-
-    function putLinePixel(ctx, x, y, solidLine) {
-        var doDraw = true;
-        if ((bigNForLine % 10 < 5) && !solidLine) {
-            doDraw = false;
-        }
-
-        var per = !pointIsInPoly(point(x, y), spectatorWindow.getPoints());
-
-
-        if (!per || (per && doDraw)) {
-            ctx.fillRect(x, y, 1, 1);
-        }
-        bigNForLine++;
-    }
-
-
-    function pointIsInPoly(p, polygon) {
-        var isInside = false;
-        var minX = polygon[0].x, maxX = polygon[0].x;
-        var minY = polygon[0].y, maxY = polygon[0].y;
-        for (var n = 1; n < polygon.length; n++) {
-            var q = polygon[n];
-            minX = Math.min(q.x, minX);
-            maxX = Math.max(q.x, maxX);
-            minY = Math.min(q.y, minY);
-            maxY = Math.max(q.y, maxY);
-        }
-
-        if (p.x < minX || p.x > maxX || p.y < minY || p.y > maxY) {
-            return false;
-        }
-
-        var i = 0, j = polygon.length - 1;
-        for (i, j; i < polygon.length; j = i++) {
-            if ((polygon[i].y > p.y) !== (polygon[j].y > p.y) &&
-                p.x < (polygon[j].x - polygon[i].x) * (p.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x) {
-                isInside = !isInside;
-            }
-        }
-
-        return isInside;
-    }
-
-    function pointInCircle(p, c) {
-        return (Math.pow(p.x - c.x, 2) + Math.pow(p.y - c.y, 2)) <= Math.pow(c.radius, 2);
-    }
-
-    function drawCircle(ctx, circle, color) {
-        ctx.fillStyle = color;
-        var x = 0;
-        var y = circle.radius;
-        var delta = 3 - 2 * circle.radius;
-        while (x < y) {
-            plotCircle(ctx, x, y, circle.x, circle.y);
-            plotCircle(ctx, y, x, circle.x, circle.y);
-            bigN++;
-            if (delta < 0)
-                delta += 4 * x + 6;
-            else {
-                delta += 4 * (x - y) + 10;
-                y--;
-            }
-            x++;
-        }
-
-        if (x === y) plotCircle(ctx, x, y, circle.x, circle.y, true);
-    }
-
-
-    var bigN = 0;
-
-    function plotCircle(ctx, x, y, x_center, y_center, force_draw = false) {
-        var no_draw_for_invisble = false;
-        if ((bigN % 10 < 5) && !force_draw) {
-            no_draw_for_invisble = true;
-        }
-        putCirclePixel(ctx, x_center + x, y_center + y, no_draw_for_invisble);
-        putCirclePixel(ctx, x_center + x, y_center - y, no_draw_for_invisble);
-        putCirclePixel(ctx, x_center - x, y_center + y, no_draw_for_invisble);
-        putCirclePixel(ctx, x_center - x, y_center - y, no_draw_for_invisble);
-    }
-
-
-    function putCirclePixel(ctx, x, y, no_draw) {
-        var per = pointIsInPoly(point(x, y), rectangle.getPoints());
-        per = per || !pointIsInPoly(point(x, y), spectatorWindow.getPoints());
-        if (!per || (per && !no_draw)) {
-            ctx.fillRect(x, y, 1, 1);
-        }
-    }
-
-
-    function movePoint(p, d) {
-        return point(p.x - d.x, p.y - d.y)
-    }
-
-    function pointBetweenPoints(p, p1, p2) {
-        return (p.x <= Math.max(p1.x, p2.x)) && (p.x >= Math.min(p1.x, p2.x)) &&
-            (p.y <= Math.max(p1.y, p2.y)) && (p.y >= Math.min(p1.y, p2.y));
-    }
-
-    function intersection(p1, p2, circle) {
-        var dX = circle.x;
-        var dY = circle.y;
-        //console.log(circle);
-        //console.log(p1);
-        //console.log(p2);
-        var dP1 = movePoint(p1, circle)
-        var dP2 = movePoint(p2, circle)
-
-        var a = dP2.y - dP1.y;
-        var b = dP2.x - dP1.x;
-        var c = dP1.x * dP2.y - dP2.x * dP1.y;
-        var r = circle.radius;
-        var EPS = 0.0001;
-
-        var x0 = -a * c / (a * a + b * b), y0 = -b * c / (a * a + b * b);
-        var result = [];
-        if (c * c > r * r * (a * a + b * b) + EPS) {
-            console.log("none")
-        }
-        //puts ("no points");
-        else if (Math.abs(c * c - r * r * (a * a + b * b)) < EPS) {
-            var p = point(dX + x0, dY + y0);
-            if (pointBetweenPoints(p, p1, p2)) {
-                result.push(p);
-            }
-            console.log("One")
-            console.log(point(dX + x0, dY + y0))
-            //puts ("1 point");
-            //cout << x0 << ' ' << y0 << '\n';
-        }
-        else {
-            var d = r * r - c * c / (a * a + b * b);
-            var mult = Math.sqrt(d / (a * a + b * b));
-
-            var pA = point(dX - x0 + b * mult, dY + y0 - a * mult);
-            var pB = point(dX - x0 - b * mult, dY + y0 + a * mult);
-            if (pointBetweenPoints(pA, p1, p2)) {
-                result.push(pA);
-            }
-            if (pointBetweenPoints(pB, p1, p2)) {
-                result.push(pB);
             }
 
-            console.log("Two")
-            console.log(pA)
-            console.log(pB)
-
-            //puts ("2 points");
-            //cout << ax << ' ' << ay << '\n' << bx << ' ' << by << '\n';
+          }
+          if (!used) {
+            if (pointInCircle(p, circle)) {
+              figure = CIRCLE_TYPE;
+              startMoving = true;
+              dPoint = point(circle.x - event.clientX, circle.y - event.clientY)
+            } else if (pointIsInPoly(p, rectangle.getPoints())) {
+              figure = RECTANGLE_TYPE;
+              startMoving = true;
+              dPoint = point(rectangle.x - event.clientX, rectangle.y - event.clientY)
+            }
+          }
+        } else if (startMoving) {
+          startMoving = false;
+        } else if (startChanging) {
+          startChanging = false;
+        } else if (startRotating) {
+          startRotating = false;
         }
 
-        return result;
+      });
+      canvas.addEventListener("mousemove", function (event) {
+        if (startMoving) {
+          if (figure === CIRCLE_TYPE) {
+            circle.x = event.clientX + dPoint.x;
+            circle.y = event.clientY + dPoint.y;
+          } else if (figure === RECTANGLE_TYPE) {
+            rectangle.x = event.clientX + dPoint.x;
+            rectangle.y = event.clientY + dPoint.y;
+          }
+          bigN = 0;
+          bigNForLine = 0;
+
+          draw();
+        } else if (startChanging) {
+          let primitive = figureObject;
+          if (figure === CIRCLE_TYPE) {
+            let c = point(event.clientX + dPoint.x, event.clientY + dPoint.y);
+            primitive.radius = Math.abs(circle.y - c.y);
+          } else if (figure === RECTANGLE_TYPE) {
+            let nP = point(event.clientX + dPoint.x, event.clientY + dPoint.y);
+
+
+            nP = rotatePoint(nP, primitive.getCenter(), -primitive.angle);
+
+            switch (changingPointNumber) {
+              case 0:
+                primitive.width -= nP.x - primitive.x;
+                primitive.height -= nP.y - primitive.y;
+                primitive.x = nP.x;
+                primitive.y = nP.y;
+                break;
+              case 1:
+                primitive.width = nP.x - primitive.x;
+                primitive.height = nP.y - primitive.y;
+                break;
+            }
+          }
+
+          draw();
+        } else if (startRotating) {
+          let primitive = figureObject;
+          let nP = point(event.clientX + dPoint.x, event.clientY + dPoint.y);
+
+          primitive.angle = -Math.atan2(nP.y, nP.x);
+
+          draw();
+        }
+      });
+      document.addEventListener("keydown", function (event) {
+        if (event.keyCode === 18) {
+          showChangeElements = true;
+          draw();
+        }
+
+      });
+      document.addEventListener("keyup", function (event) {
+        if (event.keyCode === 18) {
+          showChangeElements = false;
+          draw();
+        }
+      });
 
     }
+  }
+
+  function drawPoints(ctx, shape, color, solidLine) {
+    let len = shape.getPoints().length;
+    for (let i = 0; i < len; i++) {
+      line(ctx, shape.getPoints()[i % len], shape.getPoints()[(i + 1) % len], color, solidLine)
+    }
+  }
+
+  function point(x, y) {
+    return {
+      x: x,
+      y: y
+    }
+  }
+
+  function drawChangeCirlce(ctx, c, color, borderColor) {
+    ctx.beginPath();
+    ctx.arc(c.x, c.y, c.radius, 0, 2 * Math.PI, false);
+    ctx.fillStyle = color;
+    ctx.fill();
+    ctx.lineWidth = 1;
+    ctx.strokeStyle = borderColor;
+    ctx.stroke();
+  }
+
+  /*    function line(ctx, p1, p2, color) {
+          ctx.strokeStyle = color;
+          ctx.beginPath();
+          ctx.moveTo(p1.x, p1.y);
+          ctx.lineTo(p2.x, p2.y);
+          ctx.closePath();
+          ctx.stroke();
+      }*/
+
+  function line(ctx, p1, p2, color, solidLine) {
+    ctx.fillStyle = color;
+
+    let x1 = p1.x;
+    let x2 = p2.x;
+    let y1 = p1.y;
+    let y2 = p2.y;
+
+    let deltaX = Math.abs(x2 - x1);
+    let deltaY = Math.abs(y2 - y1);
+    let signX = x1 < x2 ? 1 : -1;
+    let signY = y1 < y2 ? 1 : -1;
+
+    let error = deltaX - deltaY;
+
+    putLinePixel(ctx, x2, y2, solidLine);
+    while (x1 !== x2 || y1 !== y2) {
+      putLinePixel(ctx, x1, y1, solidLine);
+      let error2 = error * 2;
+      //
+      if (error2 > -deltaY) {
+        error -= deltaY;
+        x1 += signX;
+      }
+      if (error2 < deltaX) {
+        error += deltaX;
+        y1 += signY;
+      }
+    }
+
+  }
+
+  let bigNForLine = 0;
+
+  function putLinePixel(ctx, x, y, solidLine) {
+    let doDraw = true;
+    if ((bigNForLine % 10 < 5) && !solidLine) {
+      doDraw = false;
+    }
+
+    let per = !pointIsInPoly(point(x, y), spectatorWindow.getPoints());
+
+
+    if (!per || (per && doDraw)) {
+      ctx.fillRect(x, y, 1, 1);
+    }
+    bigNForLine++;
+  }
+
+
+  function pointIsInPoly(p, polygon) {
+    let isInside = false;
+    let minX = polygon[0].x, maxX = polygon[0].x;
+    let minY = polygon[0].y, maxY = polygon[0].y;
+    for (let n = 1; n < polygon.length; n++) {
+      let q = polygon[n];
+      minX = Math.min(q.x, minX);
+      maxX = Math.max(q.x, maxX);
+      minY = Math.min(q.y, minY);
+      maxY = Math.max(q.y, maxY);
+    }
+
+    if (p.x < minX || p.x > maxX || p.y < minY || p.y > maxY) {
+      return false;
+    }
+
+    let i = 0, j = polygon.length - 1;
+    for (i, j; i < polygon.length; j = i++) {
+      if ((polygon[i].y > p.y) !== (polygon[j].y > p.y) &&
+        p.x < (polygon[j].x - polygon[i].x) * (p.y - polygon[i].y) / (polygon[j].y - polygon[i].y) + polygon[i].x) {
+        isInside = !isInside;
+      }
+    }
+
+    return isInside;
+  }
+
+  function pointInCircle(p, c) {
+    return (Math.pow(p.x - c.x, 2) + Math.pow(p.y - c.y, 2)) <= Math.pow(c.radius, 2);
+  }
+
+  function drawCircle(ctx, circle, color) {
+    ctx.fillStyle = color;
+    let x = 0;
+    let y = circle.radius;
+    let delta = 3 - 2 * circle.radius;
+    while (x < y) {
+      plotCircle(ctx, x, y, circle.x, circle.y);
+      plotCircle(ctx, y, x, circle.x, circle.y);
+      bigN++;
+      if (delta < 0)
+        delta += 4 * x + 6;
+      else {
+        delta += 4 * (x - y) + 10;
+        y--;
+      }
+      x++;
+    }
+
+    if (x === y) plotCircle(ctx, x, y, circle.x, circle.y, true);
+  }
+
+
+  let bigN = 0;
+
+  function plotCircle(ctx, x, y, x_center, y_center, force_draw = false) {
+    let no_draw_for_invisble = false;
+    if ((bigN % 10 < 5) && !force_draw) {
+      no_draw_for_invisble = true;
+    }
+    putCirclePixel(ctx, x_center + x, y_center + y, no_draw_for_invisble);
+    putCirclePixel(ctx, x_center + x, y_center - y, no_draw_for_invisble);
+    putCirclePixel(ctx, x_center - x, y_center + y, no_draw_for_invisble);
+    putCirclePixel(ctx, x_center - x, y_center - y, no_draw_for_invisble);
+  }
+
+
+  function putCirclePixel(ctx, x, y, no_draw) {
+    let per = pointIsInPoly(point(x, y), rectangle.getPoints());
+    per = per || !pointIsInPoly(point(x, y), spectatorWindow.getPoints());
+    if (!per || (per && !no_draw)) {
+      ctx.fillRect(x, y, 1, 1);
+    }
+  }
+
+
+  function movePoint(p, d) {
+    return point(p.x - d.x, p.y - d.y)
+  }
+
+  function pointBetweenPoints(p, p1, p2) {
+    return (p.x <= Math.max(p1.x, p2.x)) && (p.x >= Math.min(p1.x, p2.x)) &&
+      (p.y <= Math.max(p1.y, p2.y)) && (p.y >= Math.min(p1.y, p2.y));
+  }
+
+  function intersection(p1, p2, circle) {
+    let dX = circle.x;
+    let dY = circle.y;
+    //console.log(circle);
+    //console.log(p1);
+    //console.log(p2);
+    let dP1 = movePoint(p1, circle);
+    let dP2 = movePoint(p2, circle);
+
+    let a = dP2.y - dP1.y;
+    let b = dP2.x - dP1.x;
+    let c = dP1.x * dP2.y - dP2.x * dP1.y;
+    let r = circle.radius;
+    const EPS = 0.0001;
+
+    let x0 = -a * c / (a * a + b * b), y0 = -b * c / (a * a + b * b);
+    let result = [];
+    if (c * c > r * r * (a * a + b * b) + EPS) {
+      console.log("none")
+    }
+    //puts ("no points");
+    else if (Math.abs(c * c - r * r * (a * a + b * b)) < EPS) {
+      let p = point(dX + x0, dY + y0);
+      if (pointBetweenPoints(p, p1, p2)) {
+        result.push(p);
+      }
+      console.log("One");
+      console.log(point(dX + x0, dY + y0))
+      //puts ("1 point");
+      //cout << x0 << ' ' << y0 << '\n';
+    }
+    else {
+      let d = r * r - c * c / (a * a + b * b);
+      let mult = Math.sqrt(d / (a * a + b * b));
+
+      let pA = point(dX - x0 + b * mult, dY + y0 - a * mult);
+      let pB = point(dX - x0 - b * mult, dY + y0 + a * mult);
+      if (pointBetweenPoints(pA, p1, p2)) {
+        result.push(pA);
+      }
+      if (pointBetweenPoints(pB, p1, p2)) {
+        result.push(pB);
+      }
+
+      console.log("Two");
+      console.log(pA);
+      console.log(pB);
+
+      //puts ("2 points");
+      //cout << ax << ' ' << ay << '\n' << bx << ' ' << by << '\n';
+    }
+
+    return result;
+
+  }
 </script>
 </body>
 </html>

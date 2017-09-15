@@ -56,7 +56,6 @@
           getChangeCircles: function () {
             let points = this.getPoints();
             return [
-              scope.shape.createCircle(points[0].x, points[0].y, 5),
               scope.shape.createCircle(points[2].x, points[2].y, 5)
             ];
           },
@@ -212,13 +211,14 @@
           if (!used) {
             let primitives;
             if (rectangleOverCircle) {
-              primitives = [rectangle, circle];
+              primitives = [rectangle, circle, spectatorWindow];
             } else {
-              primitives = [circle, rectangle];
+              primitives = [circle, rectangle, spectatorWindow];
             }
             for (let primitive of primitives) {
               if (primitive.isPointInside(p)) {
                 figure = primitive.getType();
+                figureObject = primitive;
 
                 startMoving = true;
                 dPoint = point(primitive.x - event.clientX, primitive.y - event.clientY);
@@ -239,13 +239,8 @@
       });
       canvas.addEventListener("mousemove", function (event) {
         if (startMoving) {
-          if (figure === CIRCLE_TYPE) {
-            circle.x = event.clientX + dPoint.x;
-            circle.y = event.clientY + dPoint.y;
-          } else if (figure === RECTANGLE_TYPE) {
-            rectangle.x = event.clientX + dPoint.x;
-            rectangle.y = event.clientY + dPoint.y;
-          }
+          figureObject.x = event.clientX + dPoint.x;
+          figureObject.y = event.clientY + dPoint.y;
 
           draw();
         } else if (startChanging) {
@@ -261,12 +256,6 @@
 
             switch (changingPointNumber) {
               case 0:
-                primitive.width -= nP.x - primitive.x;
-                primitive.height -= nP.y - primitive.y;
-                primitive.x = nP.x;
-                primitive.y = nP.y;
-                break;
-              case 1:
                 primitive.width = nP.x - primitive.x;
                 primitive.height = nP.y - primitive.y;
                 break;
